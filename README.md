@@ -21,7 +21,7 @@ Kubernetes/Helm deployment, autoscaling, load testing, CI/CD, and full observabi
 | Load Testing | `loadtest/locustfile.py` | Locust suite with synthetic payloads + step-ramp/spike traffic shape |
 | CI/CD | `.github/workflows/deploy.yml` | Lint → Test → Build/Push (GHCR) → Helm deploy with auto-rollback |
 | Observability | `observability/` | Grafana dashboard, Prometheus alert rules, Alertmanager routing |
-| Static site | `docs/` | GitHub Pages showcase + live demo, SEO/OG meta, PWA manifest, robots.txt, sitemap.xml, custom 404 |
+| Static site | `docs/` | GitHub Pages showcase + live demo + resume upload/ATS scoring/job finder, SEO/OG meta, PWA manifest, robots.txt, sitemap.xml, custom 404 |
 | Repo hygiene | `.gitignore`, `.dockerignore`, `.env.example`, `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md` | Standard launch-readiness files for public repos |
 
 ## Quick Start
@@ -39,6 +39,15 @@ helm upgrade --install fever helm/fever \
 # Load test
 locust -f loadtest/locustfile.py --host https://fever.example.com
 ```
+
+### Resume upload, ATS scoring & job finder
+The demo page also includes a resume tools section:
+- **Upload** a PDF or `.txt` resume — parsed entirely client-side (PDF via pdf.js), nothing leaves your browser
+- **ATS score** — a heuristic score (keyword coverage, section headers, length, contact info) approximating common ATS parser checks
+- **Auto-optimized resume** — a downloadable/copyable version restructured with standard section headers and missing keywords called out
+- **Direct job search links** — pre-filled LinkedIn, Indeed, Naukri, and Internshala search URLs built from your target role, location, and extracted skills
+
+This is intentionally link-based rather than API-based: real job aggregation (LinkedIn/Indeed APIs) requires paid partner access, so instead you get one-tap search links you can apply from directly.
 
 ## GitHub Pages (static showcase + live demo)
 
@@ -76,9 +85,9 @@ Before deploying to a real cluster, replace these placeholders:
 
 ## Author
 
-Designed and Developed by **NIKHIL CHARY SRIRAMOJU**
+**Designed and Developed by Nikhil Chary Sriramoju**
 
 - GitHub: [github.com/Nikhil-creat](https://github.com/Nikhil-creat)
 - LinkedIn: [in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a)
 - Email: sriramojunikhil66@gmail.com
-
+- Phone: +91 6300556301
