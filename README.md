@@ -76,9 +76,9 @@ Before deploying to a real cluster, replace these placeholders:
 
 ## Author
 
-**Designed and Developed by Nikhil Chary Sriramoju**
+Designed and Developed by **NIKHIL CHARY SRIRAMOJU**
 
 - GitHub: [github.com/Nikhil-creat](https://github.com/Nikhil-creat)
 - LinkedIn: [in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a)
 - Email: sriramojunikhil66@gmail.com
-- Phone: +91 6300556301
+
