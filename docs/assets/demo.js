@@ -145,25 +145,46 @@ async function handleResumeFile(file) {
   chip.classList.add("show");
   chip.textContent = `Reading ${file.name}...`;
 
+  const name = file.name.toLowerCase();
+
   try {
-    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+    if (file.type === "application/pdf" || name.endsWith(".pdf")) {
       extractedResumeText = await extractPdfText(file);
+    } else if (
+      name.endsWith(".docx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      extractedResumeText = await extractDocxText(file);
+    } else if (
+      file.type.startsWith("image/") ||
+      name.endsWith(".png") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg")
+    ) {
+      chip.textContent = `Reading ${file.name} — running OCR, this can take 10-20s...`;
+      extractedResumeText = await extractImageTextOcr(file);
     } else {
       extractedResumeText = await file.text();
     }
-    chip.textContent = `Loaded: ${file.name} (${extractedResumeText.trim().split(/\s+/).length} words extracted)`;
+
+    const wordCount = extractedResumeText.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount < 15) {
+      chip.textContent = `Loaded ${file.name}, but only found ${wordCount} words — the file may be a scanned image with poor quality, or empty.`;
+    } else {
+      chip.textContent = `Loaded: ${file.name} (${wordCount} words extracted)`;
+    }
   } catch (err) {
-    chip.textContent = `Couldn't read ${file.name}: ${err.message}. Try a .txt file instead.`;
+    chip.textContent = `Couldn't read ${file.name}: ${err.message}. Try a different format (.txt always works).`;
     extractedResumeText = "";
   }
 }
 
 async function extractPdfText(file) {
   if (typeof pdfjsLib === "undefined") {
-    throw new Error("PDF reader failed to load — check your connection");
+    throw new Error("PDF reader failed to load — check your connection and try again");
   }
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js";
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -173,8 +194,32 @@ async function extractPdfText(file) {
     const content = await page.getTextContent();
     fullText += content.items.map((it) => it.str).join(" ") + "\n";
   }
+  if (fullText.trim().length < 10) {
+    throw new Error("No selectable text found — this PDF may be a scanned image. Try uploading it as PNG/JPG instead for OCR");
+  }
   return fullText;
 }
+
+async function extractDocxText(file) {
+  if (typeof mammoth === "undefined") {
+    throw new Error("DOCX reader failed to load — check your connection and try again");
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer });
+  return result.value || "";
+}
+
+async function extractImageTextOcr(file) {
+  if (typeof Tesseract === "undefined") {
+    throw new Error("OCR engine failed to load — check your connection and try again");
+  }
+  const { data } = await Tesseract.recognize(file, "eng");
+  return data.text || "";
+}
+
+// ---------------------------------------------------------------------
+// Keyword extraction & ATS scoring
+// ---------------------------------------------------------------------
 
 function extractKeywords(text) {
   const lower = text.toLowerCase();
@@ -183,33 +228,53 @@ function extractKeywords(text) {
   return { matched, missing };
 }
 
+const ACTION_VERBS = [
+  "led", "built", "designed", "developed", "implemented", "managed",
+  "improved", "optimized", "launched", "delivered", "automated", "reduced",
+  "increased", "created", "architected", "collaborated", "mentored",
+];
+
 function computeAtsScore(text, matched) {
-  // Heuristic scoring — approximates common ATS parser checks:
-  // keyword coverage, length, section presence, formatting simplicity.
+  // Heuristic scoring approximating common ATS parser checks. Weighted
+  // generously toward keyword coverage and structure so a genuinely
+  // well-written, keyword-rich resume can reach the 90s — this is a
+  // client-side approximation, not a real ATS engine's proprietary model.
   let score = 0;
   const lower = text.toLowerCase();
 
-  // Keyword coverage (up to 50 pts)
-  score += Math.min(50, matched.length * 2.5);
+  // Keyword coverage (up to 45 pts) — scales with how many bank terms hit
+  score += Math.min(45, matched.length * 3.2);
 
-  // Standard section headers present (up to 25 pts)
+  // Standard section headers present (up to 20 pts)
   const sections = ["experience", "education", "skills", "projects", "summary"];
   const sectionsFound = sections.filter((s) => lower.includes(s)).length;
-  score += (sectionsFound / sections.length) * 25;
+  score += (sectionsFound / sections.length) * 20;
 
-  // Reasonable length — not too short, not a wall of text (up to 15 pts)
+  // Reasonable length — not too short, not a wall of text (up to 12 pts)
   const wordCount = text.trim().split(/\s+/).length;
-  if (wordCount >= 200 && wordCount <= 1200) score += 15;
-  else if (wordCount > 50) score += 8;
+  if (wordCount >= 180 && wordCount <= 1400) score += 12;
+  else if (wordCount > 50) score += 7;
 
-  // Contact info presence — email/phone pattern (up to 10 pts)
+  // Contact info presence (up to 8 pts)
   const hasEmail = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(text);
   const hasPhone = /\d{10}|\+\d{1,3}[\s-]?\d{6,}/.test(text);
-  if (hasEmail) score += 5;
-  if (hasPhone) score += 5;
+  if (hasEmail) score += 4;
+  if (hasPhone) score += 4;
 
-  return Math.min(99, Math.round(score));
+  // Quantified achievements — numbers/percentages signal measurable impact (up to 8 pts)
+  const numberMatches = text.match(/\b\d+(\.\d+)?%?\b/g) || [];
+  score += Math.min(8, numberMatches.length);
+
+  // Strong action verbs (up to 7 pts)
+  const verbHits = ACTION_VERBS.filter((v) => lower.includes(v)).length;
+  score += Math.min(7, verbHits * 1.5);
+
+  return Math.min(100, Math.round(score));
 }
+
+// ---------------------------------------------------------------------
+// Resume rebuild — plain text + colorful HTML version
+// ---------------------------------------------------------------------
 
 function buildOptimizedResume(originalText, matched, missing, targetRole) {
   const topMissing = missing.slice(0, 6);
@@ -244,35 +309,196 @@ NOTES FOR ATS COMPATIBILITY
   );
 }
 
-function buildJobSearchLinks(matched, targetRole, location) {
-  const skillsQuery = matched.slice(0, 4).join(" ");
-  const roleQ = encodeURIComponent(targetRole || "Software Engineer");
-  const locQ = encodeURIComponent(location || "India");
-  const skillsQ = encodeURIComponent(skillsQuery);
+let lastResumeData = null;
 
-  return [
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildColorfulResumeHtml(originalText, matched, missing, targetRole, score) {
+  const skills = [...new Set(matched)].map((s) => s.replace(/\b\w/g, (c) => c.toUpperCase()));
+  const bodyText = escapeHtml(originalText.trim()).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(targetRole)} — ATS Resume by FEVER^</title>
+<style>
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f4f6fb;
+    color: #1f2430;
+  }
+  .page { max-width: 760px; margin: 24px auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; }
+  .header {
+    background: linear-gradient(135deg, #5b8cff, #34d399);
+    color: #fff; padding: 32px 36px;
+  }
+  .header h1 { margin: 0 0 4px; font-size: 1.8rem; }
+  .header .role { font-size: 1rem; opacity: 0.95; }
+  .header .score-badge {
+    display: inline-block; margin-top: 12px;
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
+    padding: 4px 14px; border-radius: 999px; font-weight: 700; font-size: 0.85rem;
+  }
+  .body { padding: 28px 36px; }
+  .section { margin-bottom: 24px; }
+  .section h2 {
+    font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #5b8cff; border-bottom: 2px solid #eef1f8; padding-bottom: 6px; margin-bottom: 12px;
+  }
+  .skills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skill-badge {
+    background: #eef4ff; color: #3560d1; border: 1px solid #d7e3ff;
+    padding: 4px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+  }
+  .exp-text { font-size: 0.92rem; line-height: 1.7; color: #333; }
+  .missing-note {
+    background: #fff8e6; border: 1px solid #ffe3a3; border-radius: 8px;
+    padding: 12px 16px; font-size: 0.82rem; color: #7a5c00;
+  }
+  .footer {
+    padding: 20px 36px; background: #f9fafc; border-top: 1px solid #eef1f8;
+    font-size: 0.78rem; color: #888; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  .print-btn {
+    display: block; margin: 20px auto; padding: 10px 22px; background: #5b8cff; color: #fff;
+    border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+  <div class="page">
+    <div class="header">
+      <h1>ATS-Optimized Resume</h1>
+      <div class="role">Target role: ${escapeHtml(targetRole)}</div>
+      <span class="score-badge">ATS Score: ${score}%</span>
+    </div>
+    <div class="body">
+      <div class="section">
+        <h2>Skills</h2>
+        <div class="skills">
+          ${skills.map((s) => `<span class="skill-badge">${escapeHtml(s)}</span>`).join("") || "<span>Add your skills here</span>"}
+        </div>
+      </div>
+      <div class="section">
+        <h2>Experience / Resume Content</h2>
+        <div class="exp-text"><p>${bodyText}</p></div>
+      </div>
+      ${
+        missing.length
+          ? `<div class="section">
+        <h2>Suggested Additions</h2>
+        <div class="missing-note">Consider adding these commonly-searched keywords if genuinely applicable to your background: ${escapeHtml(missing.slice(0, 8).join(", "))}.</div>
+      </div>`
+          : ""
+      }
+    </div>
+    <div class="footer">
+      <span>Generated by FEVER^ Resume Matching Engine</span>
+      <span>Designed and Developed by Nikhil Chary Sriramoju</span>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function openColorfulResume() {
+  if (!lastResumeData) {
+    alert("Analyze a resume first.");
+    return;
+  }
+  const html = buildColorfulResumeHtml(
+    lastResumeData.originalText,
+    lastResumeData.matched,
+    lastResumeData.missing,
+    lastResumeData.targetRole,
+    lastResumeData.score
+  );
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
+
+// ---------------------------------------------------------------------
+// Job search links — two categories via honest, verifiable search URLs
+// (no scraping or unofficial APIs — just pre-filled search queries)
+// ---------------------------------------------------------------------
+
+function buildJobSearchLinks(matched, targetRole, location) {
+  const role = targetRole || "Software Engineer";
+  const loc = location || "India";
+  const topSkills = matched.slice(0, 3).join(" ");
+  const roleQ = encodeURIComponent(role);
+  const locQ = encodeURIComponent(loc);
+
+  const paid = [
     {
-      name: "LinkedIn Jobs",
-      desc: `"${targetRole}" jobs in ${location || "India"}`,
-      url: `https://www.linkedin.com/jobs/search/?keywords=${roleQ}&location=${locQ}`,
+      name: "Internshala — Paid internships",
+      desc: `"${role}" internships with stipend in ${loc}`,
+      url: `https://internshala.com/internships/keywords-${role.toLowerCase().replace(/\s+/g, "-")}`,
     },
     {
-      name: "Indeed",
-      desc: `"${targetRole}" + top skills in ${location || "India"}`,
-      url: `https://www.indeed.com/jobs?q=${roleQ}+${skillsQ}&l=${locQ}`,
+      name: "LinkedIn — Internship & entry-level jobs",
+      desc: `"${role}" roles in ${loc}, filter by Internship/Entry level`,
+      url: `https://www.linkedin.com/jobs/search/?keywords=${roleQ}%20internship&location=${locQ}`,
     },
     {
-      name: "Naukri.com",
-      desc: `"${targetRole}" jobs in ${location || "India"}`,
-      url: `https://www.naukri.com/${(targetRole || "software-engineer").toLowerCase().replace(/\s+/g, "-")}-jobs-in-${(location || "india").toLowerCase().replace(/\s+/g, "-")}`,
-    },
-    {
-      name: "Internshala",
-      desc: `Internships matching "${targetRole}"`,
-      url: `https://internshala.com/internships/keywords-${(targetRole || "software").toLowerCase().replace(/\s+/g, "-")}`,
+      name: "Google Search — paid internships",
+      desc: `Web-wide search for paid "${role}" internships with certificate + LOR`,
+      url: `https://www.google.com/search?q=${roleQ}+internship+${encodeURIComponent(loc)}+stipend+certificate+%22letter+of+recommendation%22`,
     },
   ];
+
+  const unpaid = [
+    {
+      name: "Internshala — Unpaid internships",
+      desc: `"${role}" internships (no stipend) in ${loc} — certificate + LOR`,
+      url: `https://internshala.com/internships/keywords-${role.toLowerCase().replace(/\s+/g, "-")}-work-from-home`,
+    },
+    {
+      name: "LinkedIn — Volunteer & project-based roles",
+      desc: `Unpaid/volunteer "${role}" opportunities in ${loc}`,
+      url: `https://www.linkedin.com/jobs/search/?keywords=${roleQ}%20volunteer&location=${locQ}`,
+    },
+    {
+      name: "Google Search — unpaid internships",
+      desc: `Web-wide search for unpaid "${role}" internships offering certificate + LOR`,
+      url: `https://www.google.com/search?q=${roleQ}+unpaid+internship+${encodeURIComponent(loc)}+certificate+%22letter+of+recommendation%22`,
+    },
+  ];
+
+  return { paid, unpaid };
 }
+
+function renderJobLinks(containerId, links) {
+  document.getElementById(containerId).innerHTML = links
+    .map(
+      (j) => `
+    <a class="job-link-card" href="${j.url}" target="_blank" rel="noopener">
+      <div>
+        <div class="name">${j.name}</div>
+        <div class="desc">${j.desc}</div>
+      </div>
+      <span class="arrow">&#8594;</span>
+    </a>`
+    )
+    .join("");
+}
+
+// ---------------------------------------------------------------------
+// Main analyze action
+// ---------------------------------------------------------------------
 
 function analyzeResume() {
   const targetRole = document.getElementById("target-role").value.trim() || "Software Engineer";
@@ -282,12 +508,13 @@ function analyzeResume() {
   if (!extractedResumeText || extractedResumeText.trim().length < 20) {
     resultBox.classList.add("show");
     document.getElementById("ats-summary").textContent =
-      "Please upload a resume file first (PDF or .txt) — need at least a few lines of text to analyze.";
+      "Please upload a resume file first (PDF, DOCX, TXT, or an image) — need at least a few lines of text to analyze.";
     document.getElementById("ats-score-num").textContent = "—";
     document.getElementById("matched-pills").innerHTML = "";
     document.getElementById("missing-pills").innerHTML = "";
     document.getElementById("optimized-resume").value = "";
-    document.getElementById("job-links").innerHTML = "";
+    document.getElementById("job-links-paid").innerHTML = "";
+    document.getElementById("job-links-unpaid").innerHTML = "";
     return;
   }
 
@@ -298,10 +525,12 @@ function analyzeResume() {
   document.getElementById("ats-ring").style.setProperty("--pct", score);
   document.getElementById("ats-score-num").textContent = `${score}%`;
   document.getElementById("ats-summary").textContent =
-    score >= 80
-      ? "Strong ATS compatibility. Minor tweaks below can push it further."
-      : score >= 55
-      ? "Decent baseline — add the missing keywords below to improve parsing accuracy."
+    score >= 90
+      ? "Excellent ATS compatibility — this resume is well-structured and keyword-rich."
+      : score >= 70
+      ? "Good baseline — add a few missing keywords below to push it higher."
+      : score >= 50
+      ? "Decent baseline — add the missing keywords and section headers below."
       : "Low keyword coverage detected — the optimized version below adds structure and missing terms.";
 
   document.getElementById("matched-pills").innerHTML = matched
@@ -320,19 +549,17 @@ function analyzeResume() {
     targetRole
   );
 
-  const jobLinks = buildJobSearchLinks(matched, targetRole, location);
-  document.getElementById("job-links").innerHTML = jobLinks
-    .map(
-      (j) => `
-    <a class="job-link-card" href="${j.url}" target="_blank" rel="noopener">
-      <div>
-        <div class="name">${j.name}</div>
-        <div class="desc">${j.desc}</div>
-      </div>
-      <span class="arrow">&#8594;</span>
-    </a>`
-    )
-    .join("");
+  lastResumeData = {
+    originalText: extractedResumeText,
+    matched,
+    missing,
+    targetRole,
+    score,
+  };
+
+  const { paid, unpaid } = buildJobSearchLinks(matched, targetRole, location);
+  renderJobLinks("job-links-paid", paid);
+  renderJobLinks("job-links-unpaid", unpaid);
 }
 
 function downloadOptimizedResume() {

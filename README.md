@@ -42,10 +42,11 @@ locust -f loadtest/locustfile.py --host https://fever.example.com
 
 ### Resume upload, ATS scoring & job finder
 The demo page also includes a resume tools section:
-- **Upload** a PDF or `.txt` resume — parsed entirely client-side (PDF via pdf.js), nothing leaves your browser
-- **ATS score** — a heuristic score (keyword coverage, section headers, length, contact info) approximating common ATS parser checks
-- **Auto-optimized resume** — a downloadable/copyable version restructured with standard section headers and missing keywords called out
-- **Direct job search links** — pre-filled LinkedIn, Indeed, Naukri, and Internshala search URLs built from your target role, location, and extracted skills
+- **Upload** PDF, DOCX, TXT, or a photo/scan (PNG/JPG via in-browser OCR) — everything is parsed client-side, nothing leaves your browser
+- **ATS score (0-100%)** — a heuristic score weighing keyword coverage, section headers, resume length, contact info, quantified achievements, and action verbs
+- **Colorful resume** — opens a styled, printable HTML resume (skill badges, gradient header, score badge) you can save as PDF via the browser's print dialog
+- **Plain-text optimized resume** — downloadable/copyable version restructured with standard section headers and missing keywords called out
+- **Two job-search categories** — "Paid (stipend + certificate + LOR)" and "Unpaid (certificate + LOR only)", each with pre-filled Internshala/LinkedIn/Google search links built from your target role, location, and extracted skills
 
 This is intentionally link-based rather than API-based: real job aggregation (LinkedIn/Indeed APIs) requires paid partner access, so instead you get one-tap search links you can apply from directly.
 
@@ -85,8 +86,7 @@ Before deploying to a real cluster, replace these placeholders:
 
 ## Author
 
-*Designed and Developed by* 
-**NIKHIL CHARY SRIRAMOJU**
+**Designed and Developed by Nikhil Chary Sriramoju**
 
 - GitHub: [github.com/Nikhil-creat](https://github.com/Nikhil-creat)
 - LinkedIn: [in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a)

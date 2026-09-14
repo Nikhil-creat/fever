@@ -335,17 +335,17 @@
   <section id="resume-tools">
     <h2>Upload resume → ATS score → find matching jobs</h2>
     <p class="lead">
-      Upload your resume (PDF or .txt). FEVER^ extracts your skills, scores it against common
-      ATS (Applicant Tracking System) keyword checks, generates an ATS-optimized version you can
-      download, and builds direct, pre-filled search links to LinkedIn, Indeed, Naukri, and
-      Internshala so you can apply immediately.
+      Upload your resume — PDF, DOCX, TXT, or even a photo of a printed resume (OCR-powered).
+      FEVER^ extracts your skills, scores it against common ATS (Applicant Tracking System) keyword
+      checks, generates a colorful downloadable/printable resume, and builds direct search links to
+      paid (stipend + certificate + LOR) and unpaid (certificate + LOR) roles so you can apply immediately.
     </p>
 
     <div class="demo-box">
       <div class="upload-zone" id="upload-zone">
         <strong>Tap to upload your resume</strong>
-        <p>PDF or .txt — parsed entirely in your browser, nothing is uploaded to a server</p>
-        <input type="file" id="resume-file" accept=".pdf,.txt" />
+        <p>PDF, DOCX, TXT, or a photo/scan (PNG/JPG) — parsed entirely in your browser, nothing is uploaded to a server</p>
+        <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" />
       </div>
       <div class="file-chip" id="file-chip"></div>
 
@@ -380,21 +380,31 @@
         </div>
 
         <div style="margin-top:20px;">
-          <label for="optimized-resume">ATS-optimized resume (auto-generated — edit before applying)</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <label for="optimized-resume" style="margin:0;">ATS-optimized resume (plain text — edit before applying)</label>
+          </div>
           <textarea id="optimized-resume" readonly></textarea>
           <div class="btn-row">
-            <button class="secondary-btn" onclick="downloadOptimizedResume()">Download as .txt</button>
+            <button class="secondary-btn" onclick="downloadOptimizedResume()">Download .txt</button>
             <button class="secondary-btn" onclick="copyOptimizedResume()">Copy to clipboard</button>
+            <button class="run" style="margin-top:0;" onclick="openColorfulResume()">Open colorful resume (print/save as PDF)</button>
           </div>
         </div>
 
-        <div style="margin-top:24px;">
-          <div style="font-weight:600; margin-bottom:4px;">Apply directly</div>
+        <div style="margin-top:28px;">
+          <div style="font-weight:600; margin-bottom:4px;">Category 1 — Paid: Stipend + Certificate + LOR</div>
           <p class="footnote" style="margin-top:0;">
-            These open real job board searches pre-filled with your target role, location, and top
-            extracted skills — no API keys or scraping involved, just direct search URLs.
+            Roles/internships that pay a stipend and also provide a certificate and Letter of Recommendation.
           </p>
-          <div class="job-links" id="job-links"></div>
+          <div class="job-links" id="job-links-paid"></div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <div style="font-weight:600; margin-bottom:4px;">Category 2 — Unpaid: Certificate + LOR only</div>
+          <p class="footnote" style="margin-top:0;">
+            No stipend, but still provides a certificate and Letter of Recommendation — good for building experience fast.
+          </p>
+          <div class="job-links" id="job-links-unpaid"></div>
         </div>
       </div>
     </div>
@@ -462,7 +472,9 @@
   </footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 <script src="assets/demo.js"></script>
 </body>
 </html>
