@@ -250,6 +250,21 @@
     transition: border-color 0.15s, transform 0.15s;
   }
   .job-link-card:hover { border-color: var(--accent); transform: translateX(3px); }
+  .job-link-card.best-fit {
+    border-color: rgba(52,211,153,0.5);
+    background: linear-gradient(135deg, rgba(52,211,153,0.08), var(--surface-2));
+  }
+  .fit-badge {
+    display: inline-block; margin-left: 8px; font-size: 0.7rem; font-weight: 700;
+    background: rgba(52,211,153,0.18); color: var(--accent-2);
+    border: 1px solid rgba(52,211,153,0.4); padding: 2px 8px; border-radius: 999px;
+    vertical-align: middle;
+  }
+  .match-score {
+    font-size: 0.74rem; font-weight: 700; color: var(--accent-soft);
+    background: rgba(91,140,255,0.12); border: 1px solid rgba(91,140,255,0.3);
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
   .job-link-card .name { font-weight: 600; font-size: 0.92rem; }
   .job-link-card .desc { color: var(--text-dim); font-size: 0.78rem; margin-top: 2px; }
   .job-link-card .arrow { color: var(--accent); font-size: 1.1rem; }
@@ -394,9 +409,10 @@
     <h2>Upload resume → ATS score → find matching jobs</h2>
     <p class="lead">
       Upload your resume — PDF, DOCX, TXT, or even a photo of a printed resume (OCR-powered).
-      FEVER^ extracts your skills, scores it against common ATS (Applicant Tracking System) keyword
-      checks, generates a colorful downloadable/printable resume, and builds direct search links to
-      paid (stipend + certificate + LOR) and unpaid (certificate + LOR) roles so you can apply immediately.
+      FEVER^ auto-detects your best-fit role, extracts your skills, scores it against common ATS
+      keyword checks, generates a colorful downloadable/printable resume, and ranks direct search
+      links across LinkedIn, Internshala, Naukri, Indeed, Wellfound, and Google by match confidence —
+      the strongest fits are tagged <strong>⭐ Best Fit</strong> so you can apply immediately.
     </p>
 
     <div class="demo-box">

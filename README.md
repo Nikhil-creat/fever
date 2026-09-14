@@ -47,13 +47,13 @@ scroll-reveal animations, and toast notifications in place of browser `alert()` 
 
 ### Resume upload, ATS scoring & job finder
 The demo page also includes a resume tools section:
-- **Upload** PDF, DOCX, TXT, or a photo/scan (PNG/JPG via in-browser OCR) — everything is parsed client-side, nothing leaves your browser
+- **Upload** PDF, DOCX, TXT, or a photo/scan (PNG/JPG via in-browser OCR) — everything is parsed client-side, nothing leaves your browser; re-selecting the same file always re-triggers analysis
+- **Auto-detected role** — after upload, FEVER^ matches your extracted skills against a role/skill map and auto-fills the target role field (editable)
 - **ATS score (0-100%)** — a heuristic score weighing keyword coverage, section headers, resume length, contact info, quantified achievements, and action verbs
 - **Colorful resume** — opens a styled, printable HTML resume (skill badges, gradient header, score badge) you can save as PDF via the browser's print dialog
-- **Plain-text optimized resume** — downloadable/copyable version restructured with standard section headers and missing keywords called out
-- **Two job-search categories** — "Paid (stipend + certificate + LOR)" and "Unpaid (certificate + LOR only)", each with pre-filled Internshala/LinkedIn/Google search links built from your target role, location, and extracted skills
+- **Ranked, tagged job/internship listings** — search links aggregated across LinkedIn, Internshala, Naukri, Indeed, Wellfound, and Google, each scored by skill-match confidence and sorted descending; the top matches are tagged **⭐ Best Fit**, split into "Paid (stipend + certificate + LOR)" and "Unpaid (certificate + LOR only)" categories
 
-This is intentionally link-based rather than API-based: real job aggregation (LinkedIn/Indeed APIs) requires paid partner access, so instead you get one-tap search links you can apply from directly.
+This is intentionally link-based rather than API-based: real job aggregation (LinkedIn/Indeed APIs) requires paid partner access, so instead you get ranked, one-tap search links you can apply from directly.
 
 ## GitHub Pages (static showcase + live demo)
 

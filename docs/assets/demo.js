@@ -163,7 +163,10 @@ function initUploadZone() {
   const fileInput = document.getElementById("resume-file");
   if (!zone || !fileInput) return;
 
-  zone.addEventListener("click", () => fileInput.click());
+  zone.addEventListener("click", () => {
+    fileInput.value = ""; // reset so re-selecting the same file still fires 'change'
+    fileInput.click();
+  });
   zone.addEventListener("dragover", (e) => {
     e.preventDefault();
     zone.classList.add("drag");
@@ -181,8 +184,10 @@ function initUploadZone() {
 
 async function handleResumeFile(file) {
   const chip = document.getElementById("file-chip");
+  const zone = document.getElementById("upload-zone");
   chip.classList.add("show");
   chip.textContent = `Reading ${file.name}...`;
+  if (zone) zone.style.opacity = "0.6";
 
   const name = file.name.toLowerCase();
 
@@ -212,10 +217,48 @@ async function handleResumeFile(file) {
     } else {
       chip.textContent = `Loaded: ${file.name} (${wordCount} words extracted)`;
       toast("Resume loaded successfully.", "success");
+      autoDetectRoleAndFill(extractedResumeText);
     }
   } catch (err) {
     chip.textContent = `Couldn't read ${file.name}: ${err.message}. Try a different format (.txt always works).`;
     extractedResumeText = "";
+  } finally {
+    if (zone) zone.style.opacity = "1";
+  }
+}
+
+// ---------------------------------------------------------------------
+// Role auto-detection — reactive field fill from resume content
+// ---------------------------------------------------------------------
+const ROLE_SKILL_MAP = {
+  "Backend Engineer": ["python", "java", "node.js", "sql", "rest api", "microservices", "redis", "postgresql", "mongodb"],
+  "DevOps Engineer": ["docker", "kubernetes", "ci/cd", "aws", "azure", "gcp", "linux", "terraform"],
+  "Frontend Engineer": ["react", "javascript", "typescript", "html", "css"],
+  "Data Analyst": ["sql", "python", "data structures", "machine learning"],
+  "Machine Learning Engineer": ["machine learning", "python", "algorithms", "data structures"],
+  "QA / Test Engineer": ["testing", "debugging", "agile", "scrum"],
+  "Project Manager": ["agile", "scrum", "project management", "leadership", "communication"],
+};
+
+function autoDetectRoleAndFill(text) {
+  const lower = text.toLowerCase();
+  let bestRole = null;
+  let bestScore = 0;
+
+  for (const [role, skills] of Object.entries(ROLE_SKILL_MAP)) {
+    const hits = skills.filter((s) => lower.includes(s)).length;
+    if (hits > bestScore) {
+      bestScore = hits;
+      bestRole = role;
+    }
+  }
+
+  if (bestRole && bestScore >= 2) {
+    const roleField = document.getElementById("target-role");
+    if (roleField && (roleField.value.trim() === "" || roleField.value.trim() === "Backend Engineer")) {
+      roleField.value = bestRole;
+      toast(`Detected best-fit role: ${bestRole} — feel free to edit.`, "success");
+    }
   }
 }
 
@@ -475,64 +518,118 @@ function openColorfulResume() {
 // (no scraping or unofficial APIs — just pre-filled search queries)
 // ---------------------------------------------------------------------
 
+// ---------------------------------------------------------------------
+// Ranked "Best Fit" job/internship engine — aggregates search links across
+// platforms, scores each by skill-match confidence, sorts descending, and
+// tags the top results so the strongest fits surface first.
+// ---------------------------------------------------------------------
+
 function buildJobSearchLinks(matched, targetRole, location) {
   const role = targetRole || "Software Engineer";
   const loc = location || "India";
-  const topSkills = matched.slice(0, 3).join(" ");
+  const roleSlug = role.toLowerCase().replace(/\s+/g, "-");
   const roleQ = encodeURIComponent(role);
   const locQ = encodeURIComponent(loc);
+  const topSkills = matched.slice(0, 3).join(", ");
 
-  const paid = [
+  // Base confidence scales with how many of the resume's matched skills
+  // this search query effectively targets — more matched keywords means
+  // the platform search is more likely to surface genuinely relevant results.
+  const baseScore = Math.min(96, 42 + matched.length * 5);
+
+  const paidRaw = [
     {
-      name: "Internshala — Paid internships",
+      name: "Internshala",
       desc: `"${role}" internships with stipend in ${loc}`,
-      url: `https://internshala.com/internships/keywords-${role.toLowerCase().replace(/\s+/g, "-")}`,
+      url: `https://internshala.com/internships/keywords-${roleSlug}`,
+      weight: 6,
     },
     {
-      name: "LinkedIn — Internship & entry-level jobs",
-      desc: `"${role}" roles in ${loc}, filter by Internship/Entry level`,
+      name: "LinkedIn Jobs",
+      desc: `"${role}" + internship/entry-level filter in ${loc}`,
       url: `https://www.linkedin.com/jobs/search/?keywords=${roleQ}%20internship&location=${locQ}`,
+      weight: 4,
     },
     {
-      name: "Google Search — paid internships",
-      desc: `Web-wide search for paid "${role}" internships with certificate + LOR`,
-      url: `https://www.google.com/search?q=${roleQ}+internship+${encodeURIComponent(loc)}+stipend+certificate+%22letter+of+recommendation%22`,
+      name: "Naukri.com",
+      desc: `"${role}" openings in ${loc}`,
+      url: `https://www.naukri.com/${roleSlug}-jobs-in-${loc.toLowerCase().replace(/\s+/g, "-")}`,
+      weight: 2,
+    },
+    {
+      name: "Indeed",
+      desc: `"${role}" + ${topSkills || "core skills"} in ${loc}`,
+      url: `https://www.indeed.com/jobs?q=${roleQ}+${encodeURIComponent(topSkills)}&l=${locQ}`,
+      weight: 1,
+    },
+    {
+      name: "Wellfound (AngelList)",
+      desc: `Startup "${role}" roles — often paid + fast-growing teams`,
+      url: `https://wellfound.com/jobs?query=${roleQ}`,
+      weight: 0,
+    },
+    {
+      name: "Google Search",
+      desc: `Web-wide search: paid "${role}" internships + certificate + LOR`,
+      url: `https://www.google.com/search?q=${roleQ}+internship+${locQ}+stipend+certificate+%22letter+of+recommendation%22`,
+      weight: -2,
     },
   ];
 
-  const unpaid = [
+  const unpaidRaw = [
     {
-      name: "Internshala — Unpaid internships",
+      name: "Internshala — Unpaid",
       desc: `"${role}" internships (no stipend) in ${loc} — certificate + LOR`,
-      url: `https://internshala.com/internships/keywords-${role.toLowerCase().replace(/\s+/g, "-")}-work-from-home`,
+      url: `https://internshala.com/internships/keywords-${roleSlug}-work-from-home`,
+      weight: 5,
     },
     {
-      name: "LinkedIn — Volunteer & project-based roles",
+      name: "LinkedIn — Volunteer",
       desc: `Unpaid/volunteer "${role}" opportunities in ${loc}`,
       url: `https://www.linkedin.com/jobs/search/?keywords=${roleQ}%20volunteer&location=${locQ}`,
+      weight: 3,
     },
     {
-      name: "Google Search — unpaid internships",
-      desc: `Web-wide search for unpaid "${role}" internships offering certificate + LOR`,
-      url: `https://www.google.com/search?q=${roleQ}+unpaid+internship+${encodeURIComponent(loc)}+certificate+%22letter+of+recommendation%22`,
+      name: "Letsintern",
+      desc: `"${role}" unpaid/training internships`,
+      url: `https://www.letsintern.com/internship/${roleSlug}-internship`,
+      weight: 1,
+    },
+    {
+      name: "Google Search",
+      desc: `Web-wide search: unpaid "${role}" internships + certificate + LOR`,
+      url: `https://www.google.com/search?q=${roleQ}+unpaid+internship+${locQ}+certificate+%22letter+of+recommendation%22`,
+      weight: -1,
     },
   ];
 
-  return { paid, unpaid };
+  const scoreAndSort = (list) =>
+    list
+      .map((item) => ({ ...item, score: Math.max(1, Math.min(99, baseScore + item.weight)) }))
+      .sort((a, b) => b.score - a.score);
+
+  return { paid: scoreAndSort(paidRaw), unpaid: scoreAndSort(unpaidRaw) };
 }
 
 function renderJobLinks(containerId, links) {
   document.getElementById(containerId).innerHTML = links
-    .map(
-      (j) => `
-    <a class="job-link-card" href="${j.url}" target="_blank" rel="noopener">
+    .map((j, i) => {
+      const isBestFit = i < 2 && j.score >= 60;
+      return `
+    <a class="job-link-card${isBestFit ? " best-fit" : ""}" href="${j.url}" target="_blank" rel="noopener">
       <div>
-        <div class="name">${j.name}</div>
+        <div class="name">
+          ${j.name}
+          ${isBestFit ? '<span class="fit-badge">⭐ Best Fit</span>' : ""}
+        </div>
         <div class="desc">${j.desc}</div>
       </div>
-      <span class="arrow">&#8594;</span>
-    </a>`
-    )
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="match-score">${j.score}% match</span>
+        <span class="arrow">&#8594;</span>
+      </div>
+    </a>`;
+    })
     .join("");
 }
 
