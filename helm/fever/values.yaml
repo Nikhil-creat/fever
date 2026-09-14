@@ -1,0 +1,111 @@
+# ============================================================================
+# FEVER^ default values — override per-environment via -f values-prod.yaml etc.
+# ============================================================================
+
+replicaCount: 3
+
+image:
+  repository: ghcr.io/your-org/fever
+  tag: "latest"          # Overridden by CI with the immutable commit SHA tag
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"          # allow large resume uploads
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/limit-rps: "20"                  # per-IP rate limiting
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: fever.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: fever-tls
+      hosts:
+        - fever.example.com
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 30
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  # Custom metric: requests-per-second per pod, sourced from Prometheus Adapter
+  customMetric:
+    name: http_requests_per_second
+    targetAverageValue: "50"
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+env:
+  REDIS_URL: "redis://fever-redis-master.default.svc.cluster.local:6379/0"
+  REDIS_MAX_CONNECTIONS: "50"
+  MEMORY_THRESHOLD_PCT: "90.0"
+  APP_VERSION: "1.0.0"
+
+probes:
+  liveness:
+    path: /health/live
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    path: /health/ready
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname

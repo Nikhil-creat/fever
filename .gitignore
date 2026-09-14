@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Node (if a JS toolchain is added later) ---
+node_modules/
+dist/
+
+# --- Helm ---
+helm/**/charts/
+helm/**/*.tgz
+
+# --- Logs ---
+*.log
+
+# --- Local test artifacts ---
+.coverage
+htmlcov/

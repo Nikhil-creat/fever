@@ -1,0 +1,18 @@
+apiVersion: v2
+name: fever
+description: FEVER^ — High-throughput Kubernetes-native resume matching engine
+type: application
+version: 1.0.0        # Chart version — bump on any template/values change
+appVersion: "1.0.0"   # Application (container image) version
+keywords:
+  - fastapi
+  - resume-matching
+  - ml
+  - fever
+home: https://github.com/Nikhil-creat
+maintainers:
+  - name: Nikhil Chary Sriramoju
+    email: sriramojunikhil66@gmail.com
+    url: https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a
+# Designed and Developed by Nikhil Chary Sriramoju
+# GitHub: https://github.com/Nikhil-creat | Phone: +91 6300556301

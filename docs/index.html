@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FEVER^ — High-Throughput Resume Matching Engine</title>
+
+<!-- Primary SEO -->
+<meta name="description" content="FEVER^ — a cloud-native, Kubernetes-based resume matching engine with async FastAPI, Redis, Helm autoscaling, CI/CD, and full observability. Designed and developed by Nikhil Chary Sriramoju." />
+<meta name="author" content="Nikhil Chary Sriramoju" />
+<meta name="keywords" content="FEVER, resume matching, FastAPI, Kubernetes, Helm, Redis, DevOps, Nikhil Chary Sriramoju, cloud native, CI/CD" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://nikhil-creat.github.io/fever/" />
+
+<!-- Open Graph (Facebook, LinkedIn, WhatsApp previews) -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="FEVER^ — High-Throughput Resume Matching Engine" />
+<meta property="og:description" content="A cloud-native Kubernetes resume matching engine with async FastAPI, Redis, autoscaling, CI/CD, and observability. By Nikhil Chary Sriramoju." />
+<meta property="og:url" content="https://nikhil-creat.github.io/fever/" />
+<meta property="og:image" content="https://nikhil-creat.github.io/fever/assets/icons/og-cover.png" />
+<meta property="og:site_name" content="FEVER^" />
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="FEVER^ — High-Throughput Resume Matching Engine" />
+<meta name="twitter:description" content="Cloud-native Kubernetes resume matching engine — FastAPI, Redis, Helm, CI/CD, observability." />
+<meta name="twitter:image" content="https://nikhil-creat.github.io/fever/assets/icons/og-cover.png" />
+
+<!-- Favicons / touch icons -->
+<link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+<link rel="alternate icon" href="assets/icons/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0b0d12" />
+
+<!-- Perf: no external font/CDN dependency, so no preconnect needed -->
+<style>
+  :root {
+    --bg: #0b0d12;
+    --surface: #12151c;
+    --surface-2: #171b24;
+    --border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa1ad;
+    --accent: #5b8cff;
+    --accent-2: #34d399;
+    --danger: #f87171;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  header.hero {
+    padding: 64px 0 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+  }
+  h1 { font-size: 2.4rem; margin: 0 0 12px; font-weight: 700; }
+  .subtitle { color: var(--text-dim); font-size: 1.1rem; max-width: 640px; }
+  .cta-row { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+  a.btn {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+  }
+  a.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  a.btn.secondary { color: var(--text); background: var(--surface); }
+
+  section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+  section h2 { font-size: 1.5rem; margin-bottom: 8px; }
+  section .lead { color: var(--text-dim); margin-bottom: 24px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 1rem; }
+  .card p { margin: 0; color: var(--text-dim); font-size: 0.9rem; }
+  .card code { color: var(--accent-2); font-size: 0.85rem; }
+
+  pre {
+    background: #0e1015;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+
+  /* --- Live demo --- */
+  .demo-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--text-dim); margin: 12px 0 6px; }
+  input[type="text"], input[type="url"], textarea {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+  textarea { min-height: 90px; }
+  button.run {
+    margin-top: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  button.run:hover { opacity: 0.9; }
+  .result {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 0.9rem;
+    display: none;
+  }
+  .result.show { display: block; }
+  .result .score { font-size: 1.6rem; font-weight: 700; color: var(--accent-2); }
+  .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag.live { background: rgba(52,211,153,0.15); color: var(--accent-2); border: 1px solid rgba(52,211,153,0.3); }
+  .tag.mock { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+
+  footer { padding: 40px 0 60px; }
+  .author-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .author-card .avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.2rem; color: #0b0d12;
+    flex-shrink: 0;
+  }
+  .author-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .author-links a {
+    color: var(--accent); text-decoration: none; font-size: 0.88rem;
+    border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px;
+  }
+  .author-links a:hover { border-color: var(--accent); }
+  .footnote { color: var(--text-dim); font-size: 0.8rem; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="badge">Cloud-native · Kubernetes · FastAPI</span>
+    <h1>FEVER^</h1>
+    <p class="subtitle">
+      A high-throughput resume matching engine, built with an async FastAPI backend,
+      Redis caching, autoscaling on Kubernetes via Helm, full CI/CD, and a Prometheus/Grafana
+      observability stack.
+    </p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/Nikhil-creat" target="_blank" rel="noopener">View on GitHub</a>
+      <a class="btn secondary" href="#demo">Try the live demo</a>
+      <a class="btn secondary" href="#architecture">Architecture</a>
+    </div>
+  </header>
+
+  <section id="demo">
+    <h2>Live demo <span id="mode-tag" class="tag mock">mock mode</span></h2>
+    <p class="lead">
+      Paste a job description and a resume snippet to see a match score. If a backend URL is configured below,
+      this calls the real FastAPI <code>/api/v1/match</code> endpoint. Otherwise it falls back to an
+      in-browser JavaScript approximation of the same scoring logic, so the demo always works —
+      even on GitHub Pages with no server running.
+    </p>
+
+    <div class="demo-box">
+      <label for="backend-url">Backend URL (optional — leave blank to use mock scoring)</label>
+      <input type="url" id="backend-url" placeholder="https://your-fever-backend.onrender.com" />
+
+      <label for="jd">Job description</label>
+      <textarea id="jd" placeholder="We are hiring a Backend Engineer with 5+ years experience in Python, Kubernetes, Redis...">We are hiring a Backend Engineer with 5+ years of experience in Python, Kubernetes, Docker, Redis, and CI/CD pipelines.</textarea>
+
+      <label for="resume">Resume text</label>
+      <textarea id="resume" placeholder="Worked with Python for 4 years. Built CI/CD pipelines...">Worked with Python for 4 years. Built CI/CD pipelines using GitHub Actions. Deployed services on Kubernetes with Docker containers. Some experience with Redis caching.</textarea>
+
+      <label for="cand-id">Candidate ID</label>
+      <input type="text" id="cand-id" value="demo-candidate-001" />
+
+      <button class="run" onclick="runMatch()">Run match</button>
+
+      <div id="result" class="result">
+        <div>Score: <span class="score" id="score-val">—</span></div>
+        <div id="result-meta" class="footnote"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>Architecture</h2>
+    <p class="lead">Full production stack — code lives in the repo, deploy config lives in Helm/GitHub Actions.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>FastAPI application</h3>
+        <p>Async execution, <code>redis.asyncio</code> connection pooling, Prometheus metrics middleware, K8s liveness/readiness probes with <code>psutil</code> memory checks.</p>
+      </div>
+      <div class="card">
+        <h3>Containerization</h3>
+        <p>Multi-stage Dockerfile, non-root UID 1001, slim base image, pre-built wheel layer caching.</p>
+      </div>
+      <div class="card">
+        <h3>Kubernetes / Helm</h3>
+        <p>Deployment, Service, Ingress (NGINX + cert-manager TLS + rate limiting), and an HPA driven by CPU, memory, and custom Prometheus RPS metrics.</p>
+      </div>
+      <div class="card">
+        <h3>Load testing</h3>
+        <p>Locust suite with synthetic job/resume generators and a step-ramp → spike traffic shape for HPA validation.</p>
+      </div>
+      <div class="card">
+        <h3>CI/CD</h3>
+        <p>GitHub Actions: lint (Black/Flake8) + PyTest → build/push to GHCR → Helm upgrade with automatic rollback.</p>
+      </div>
+      <div class="card">
+        <h3>Observability</h3>
+        <p>Grafana dashboard (RPS, latency percentiles, cache hit ratio, pod CPU/mem), Prometheus alert rules, Alertmanager routing to Slack + PagerDuty.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="deploy-note">
+    <h2>Deploying the real backend</h2>
+    <p class="lead">
+      GitHub Pages only serves static files, so it can't run the FastAPI/Redis backend directly.
+      This page is a static showcase + demo client. To make the "live" demo actually call real infrastructure:
+    </p>
+    <pre><code>1. Deploy app/ + Dockerfile to any container host
+   (Render, Railway, Fly.io, EC2, or the included Helm chart on a K8s cluster)
+2. Enable CORS on the FastAPI app for your Pages origin
+3. Paste that backend's public URL into the "Backend URL" field above
+4. The demo will call /api/v1/match on your real server instead of mocking</code></pre>
+  </section>
+
+  <footer>
+    <div class="author-card">
+      <div class="avatar">NS</div>
+      <div>
+        <strong>Designed and Developed by Nikhil Chary Sriramoju</strong>
+        <div class="author-links">
+          <a href="https://github.com/Nikhil-creat" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a" target="_blank" rel="noopener">LinkedIn</a>
+          <a href="mailto:sriramojunikhil66@gmail.com">sriramojunikhil66@gmail.com</a>
+          <a href="tel:+916300556301">+91 6300556301</a>
+        </div>
+      </div>
+    </div>
+    <p class="footnote">FEVER^ — deployed via GitHub Pages from <code>/docs</code>. Backend, Helm chart, and CI/CD live in the repository root.</p>
+  </footer>
+</div>
+
+<script src="assets/demo.js"></script>
+</body>
+</html>

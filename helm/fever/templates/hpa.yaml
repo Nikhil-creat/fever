@@ -1,0 +1,49 @@
+{{- if .Values.autoscaling.enabled -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "fever.fullname" . }}
+  labels:
+    {{- include "fever.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "fever.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    # Custom metric sourced from Prometheus via the Prometheus Adapter (custom.metrics.k8s.io)
+    - type: Pods
+      pods:
+        metric:
+          name: {{ .Values.autoscaling.customMetric.name }}
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.autoscaling.customMetric.targetAverageValue }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300   # slow scale-down to avoid flapping
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+{{- end }}

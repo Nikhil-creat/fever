@@ -1,0 +1,77 @@
+# FEVER^ Alertmanager Configuration
+# Designed and Developed by Nikhil Chary Sriramoju
+# GitHub: https://github.com/Nikhil-creat | LinkedIn: https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a
+# Email: sriramojunikhil66@gmail.com | Phone: +91 6300556301
+global:
+  resolve_timeout: 5m
+  slack_api_url: "https://hooks.slack.com/services/REPLACE/WITH/WEBHOOK"
+
+route:
+  receiver: fever-slack-warnings
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical incidents page on-call immediately via PagerDuty
+    - matchers:
+        - severity="critical"
+        - service="fever"
+      receiver: fever-pagerduty-critical
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true   # also notify Slack for visibility
+
+    # Everything else (warnings) goes to Slack only
+    - matchers:
+        - severity="warning"
+        - service="fever"
+      receiver: fever-slack-warnings
+      repeat_interval: 4h
+
+receivers:
+  - name: fever-slack-warnings
+    slack_configs:
+      - channel: "#fever-alerts"
+        send_resolved: true
+        title: "{{ .Status | toUpper }} — {{ .CommonLabels.alertname }}"
+        text: >-
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+
+  - name: fever-pagerduty-critical
+    pagerduty_configs:
+      - routing_key: "REPLACE_WITH_PAGERDUTY_INTEGRATION_KEY"
+        severity: critical
+        description: "{{ .CommonAnnotations.summary }}"
+        details:
+          firing_alerts: "{{ .Alerts.Firing | len }}"
+          namespace: "fever-prod"
+
+# ------------------------------------------------------------------------
+# Inhibition rules: suppress noisy downstream alerts when a root-cause
+# alert is already firing, to avoid alert storms during real incidents.
+# ------------------------------------------------------------------------
+inhibit_rules:
+  # A pod crash-loop implies latency/CPU alerts on the same pod are noise
+  - source_matchers:
+      - alertname="FeverPodCrashLooping"
+    target_matchers:
+      - alertname=~"FeverHighP95Latency|FeverCriticalP95Latency|FeverHighCPUUsage"
+    equal: ["pod"]
+
+  # A critical CPU alert supersedes its own warning-level counterpart
+  - source_matchers:
+      - alertname="FeverCriticalCPUUsage"
+    target_matchers:
+      - alertname="FeverHighCPUUsage"
+    equal: ["pod"]
+
+  # A critical latency alert supersedes its own warning-level counterpart
+  - source_matchers:
+      - alertname="FeverCriticalP95Latency"
+    target_matchers:
+      - alertname="FeverHighP95Latency"
+    equal: ["service"]

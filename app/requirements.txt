@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+uvloop==0.20.0
+redis==5.0.8
+prometheus-client==0.20.0
+psutil==6.0.0
+pydantic==2.9.2
+gunicorn==22.0.0

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nikhil-creat.github.io/fever/sitemap.xml

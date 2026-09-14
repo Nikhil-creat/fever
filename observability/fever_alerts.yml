@@ -1,0 +1,114 @@
+# FEVER^ Prometheus Alert Rules
+# Designed and Developed by Nikhil Chary Sriramoju
+# GitHub: https://github.com/Nikhil-creat | LinkedIn: https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a
+# Email: sriramojunikhil66@gmail.com | Phone: +91 6300556301
+groups:
+  - name: fever.rules
+    rules:
+      # --------------------------------------------------------------
+      # High CPU utilization (warning -> critical escalation)
+      # --------------------------------------------------------------
+      - alert: FeverHighCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="fever-prod", pod=~"fever-.*"}[5m]))
+            by (pod)
+          / sum(kube_pod_container_resource_limits{namespace="fever-prod", resource="cpu", pod=~"fever-.*"})
+            by (pod)
+          > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          service: fever
+        annotations:
+          summary: "FEVER^ pod {{ $labels.pod }} CPU usage above 80%"
+          description: "Pod {{ $labels.pod }} has sustained CPU usage over 80% of its limit for 5 minutes."
+
+      - alert: FeverCriticalCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="fever-prod", pod=~"fever-.*"}[5m]))
+            by (pod)
+          / sum(kube_pod_container_resource_limits{namespace="fever-prod", resource="cpu", pod=~"fever-.*"})
+            by (pod)
+          > 0.95
+        for: 3m
+        labels:
+          severity: critical
+          service: fever
+        annotations:
+          summary: "FEVER^ pod {{ $labels.pod }} CPU usage critical (>95%)"
+          description: "Pod {{ $labels.pod }} is CPU-saturated. HPA may not be able to scale fast enough."
+
+      # --------------------------------------------------------------
+      # Elevated p95 latency
+      # --------------------------------------------------------------
+      - alert: FeverHighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{path="/api/v1/match"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          service: fever
+        annotations:
+          summary: "FEVER^ API p95 latency above 1s"
+          description: "p95 latency for /api/v1/match has exceeded 1.0s for 5 minutes."
+
+      - alert: FeverCriticalP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{path="/api/v1/match"}[5m])) by (le)
+          ) > 3.0
+        for: 3m
+        labels:
+          severity: critical
+          service: fever
+        annotations:
+          summary: "FEVER^ API p95 latency critical (>3s)"
+          description: "p95 latency for /api/v1/match has exceeded 3.0s for 3 minutes — user-facing degradation likely."
+
+      # --------------------------------------------------------------
+      # Container crash loops
+      # --------------------------------------------------------------
+      - alert: FeverPodCrashLooping
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="fever-prod", pod=~"fever-.*"}[15m]) > 3
+        for: 5m
+        labels:
+          severity: critical
+          service: fever
+        annotations:
+          summary: "FEVER^ pod {{ $labels.pod }} is crash looping"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted more than 3 times in 15 minutes."
+
+      # --------------------------------------------------------------
+      # Redis cache degradation
+      # --------------------------------------------------------------
+      - alert: FeverLowCacheHitRatio
+        expr: |
+          sum(rate(fever_redis_cache_hits_total[15m]))
+          / (sum(rate(fever_redis_cache_hits_total[15m])) + sum(rate(fever_redis_cache_misses_total[15m])))
+          < 0.30
+        for: 15m
+        labels:
+          severity: warning
+          service: fever
+        annotations:
+          summary: "FEVER^ Redis cache hit ratio below 30%"
+          description: "Cache hit ratio has been below 30% for 15 minutes; check Redis health or TTL config."
+
+      # --------------------------------------------------------------
+      # Elevated error rate
+      # --------------------------------------------------------------
+      - alert: FeverElevatedErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+          / sum(rate(http_requests_total[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: fever
+        annotations:
+          summary: "FEVER^ 5xx error rate above 5%"
+          description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."

@@ -1,0 +1,16 @@
+.git
+.github
+docs
+helm
+observability
+loadtest
+.env
+.env.*
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+*.md
+LICENSE
+.gitignore
+.dockerignore
