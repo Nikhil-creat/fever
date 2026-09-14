@@ -12,6 +12,45 @@
  * Email: sriramojunikhil66@gmail.com | Phone: +91 6300556301
  */
 
+// ---------------------------------------------------------------------
+// UI polish: toast notifications (replaces alert()) + scroll-reveal
+// ---------------------------------------------------------------------
+function toast(message, type = "") {
+  const container = document.getElementById("toast-container");
+  if (!container) {
+    // Fallback for older cached pages without the toast container
+    alert(message);
+    return;
+  }
+  const el = document.createElement("div");
+  el.className = `toast ${type}`.trim();
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function initScrollReveal() {
+  const targets = document.querySelectorAll(".reveal");
+  if (!("IntersectionObserver" in window) || !targets.length) {
+    targets.forEach((t) => t.classList.add("in-view"));
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12 }
+  );
+  targets.forEach((t) => observer.observe(t));
+}
+
+document.addEventListener("DOMContentLoaded", initScrollReveal);
+
 function mockMatchScore(jobDescription, resumeText) {
   const tokenize = (s) =>
     new Set(
@@ -172,6 +211,7 @@ async function handleResumeFile(file) {
       chip.textContent = `Loaded ${file.name}, but only found ${wordCount} words — the file may be a scanned image with poor quality, or empty.`;
     } else {
       chip.textContent = `Loaded: ${file.name} (${wordCount} words extracted)`;
+      toast("Resume loaded successfully.", "success");
     }
   } catch (err) {
     chip.textContent = `Couldn't read ${file.name}: ${err.message}. Try a different format (.txt always works).`;
@@ -415,7 +455,7 @@ function buildColorfulResumeHtml(originalText, matched, missing, targetRole, sco
 
 function openColorfulResume() {
   if (!lastResumeData) {
-    alert("Analyze a resume first.");
+    toast("Analyze a resume first.");
     return;
   }
   const html = buildColorfulResumeHtml(
@@ -578,7 +618,7 @@ function copyOptimizedResume() {
   const text = document.getElementById("optimized-resume").value;
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {
-    alert("Optimized resume copied to clipboard.");
+    toast("Optimized resume copied to clipboard.", "success");
   });
 }
 

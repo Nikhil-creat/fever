@@ -40,6 +40,11 @@ helm upgrade --install fever helm/fever \
 locust -f loadtest/locustfile.py --host https://fever.example.com
 ```
 
+### Interface
+Sticky nav with smooth-scroll links, animated gradient hero, a live stats bar (SLA target,
+p95 latency, autoscale ceiling), a tech-stack chip strip, glassmorphism cards with hover-lift,
+scroll-reveal animations, and toast notifications in place of browser `alert()` popups.
+
 ### Resume upload, ATS scoring & job finder
 The demo page also includes a resume tools section:
 - **Upload** PDF, DOCX, TXT, or a photo/scan (PNG/JPG via in-browser OCR) — everything is parsed client-side, nothing leaves your browser
@@ -86,7 +91,7 @@ Before deploying to a real cluster, replace these placeholders:
 
 ## Author
 
-**Designed and Developed by NIKHIL CHARY SRIRAMOJU**
+**Designed and Developed by Nikhil Chary Sriramoju**
 
 - GitHub: [github.com/Nikhil-creat](https://github.com/Nikhil-creat)
 - LinkedIn: [in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a)
